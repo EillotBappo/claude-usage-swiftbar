@@ -1,0 +1,12 @@
+{
+  "_comment": "USD per million tokens. Keys: in, out, cache_w (cache write), cache_r (cache read). Prefix match on model id; 'default' is the fallback. Edit in dashboard Settings → saved to settings.json (overrides this file).",
+  "claude-fable-5-1": {"in": 15, "out": 75, "cache_w": 18.75, "cache_r": 1.5},
+  "claude-mythos-5-1": {"in": 15, "out": 75, "cache_w": 18.75, "cache_r": 1.5},
+  "claude-opus-5-5": {"in": 5, "out": 25, "cache_w": 6.25, "cache_r": 0.5},
+  "claude-opus-4": {"in": 15, "out": 75, "cache_w": 18.75, "cache_r": 1.5},
+  "claude-sonnet-5-5": {"in": 3, "out": 15, "cache_w": 3.75, "cache_r": 0.3},
+  "claude-sonnet-4": {"in": 3, "out": 15, "cache_w": 3.75, "cache_r": 0.3},
+  "claude-haiku-5-5": {"in": 1, "out": 5, "cache_w": 1.25, "cache_r": 0.1},
+  "claude-haiku": {"in": 0.8, "out": 4, "cache_w": 1, "cache_r": 0.08},
+  "default": {"in": 3, "out": 15, "cache_w": 3.75, "cache_r": 0.3}
+}
