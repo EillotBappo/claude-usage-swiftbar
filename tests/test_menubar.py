@@ -15,9 +15,19 @@ def st(**over):
     return s
 
 
-def test_default_fields_pill():
+def test_default_fields_pill_is_single_template_image():
     t = M.title(st(), Q, ST, NOW)
-    assert t.startswith("67% · 1:59 · wk 12% | templateImage=") and "color=" not in t
+    assert t.startswith("| templateImage=") and "color=" not in t
+
+
+def test_pill_segments_one_bar_per_quota_field(monkeypatch):
+    calls = []
+    monkeypatch.setattr(M, "title_image", lambda segs, color: calls.append((segs, color)) or "x")
+    M.title(st(fields=["five_pct", "five_left", "week_pct", "today_cost"]), Q, ST, NOW)
+    segs, color = calls[0]
+    assert segs == [("bar", 0.67), ("text", "67% · 1:59"), ("bar", 0.12), ("text", "wk 12% · $12.50")] and color is None
+    M.title(st(fields=["today_cost"], thresholds={"warn": 10, "danger": 50}), Q, ST, NOW)
+    assert calls[1] == ([("bar", 0.67), ("text", "$12.50")], "#FF3B30")
 
 
 def test_field_order_and_text_style():
@@ -26,8 +36,9 @@ def test_field_order_and_text_style():
 
 
 def test_thresholds_color():
-    assert "#FF9F0A" in M.title(st(thresholds={"warn": 60, "danger": 90}), Q, ST, NOW)
-    assert "#FF3B30" in M.title(st(thresholds={"warn": 10, "danger": 50}), Q, ST, NOW)
+    assert "#FF9F0A" in M.title(st(style="text", thresholds={"warn": 60, "danger": 90}), Q, ST, NOW)
+    assert "#FF3B30" in M.title(st(style="text", thresholds={"warn": 10, "danger": 50}), Q, ST, NOW)
+    assert M.title(st(thresholds={"warn": 10, "danger": 50}), Q, ST, NOW).startswith("| image=")  # colored, not template
 
 
 def test_show_when_apps():
@@ -37,14 +48,16 @@ def test_show_when_apps():
     assert M.visible(st(), "") is True
 
 
-def test_hide_below_pct_and_stale_marker():
+def test_hide_below_pct_and_stale_marker(monkeypatch):
+    from claude_usage import render
+    monkeypatch.setattr(render, "HAVE_PIL", False)  # plain-text rows so the assertion can see them
     assert M.render(st(hide_below_pct=80), Q, ST, NOW) == ""
-    out = M.render(st(), dict(Q, age_s=2000), ST, NOW)
-    assert out.startswith("~67%") and "Last updated 33 min ago" in out or "image=" in out
+    out = M.render(st(style="text"), dict(Q, age_s=2000), ST, NOW)
+    assert out.startswith("~67%") and "Last updated 33 min ago" in out
 
 
 def test_no_quota_fallback_and_menu_items():
-    out = M.render(st(), None, ST, NOW, plugin_path="/x/claude-usage.1m.sh")
+    out = M.render(st(style="text"), None, ST, NOW, plugin_path="/x/claude-usage.1m.sh")
     assert out.startswith("– · – · wk – |")
     assert "Open dashboard | bash='/x/claude-usage.1m.sh' param1=open" in out
     assert "param1=open param2=settings" in out and "param1=refresh" in out

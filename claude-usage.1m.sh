@@ -17,7 +17,12 @@ export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
 SELF="$0"; while [ -L "$SELF" ]; do SELF="$(readlink "$SELF")"; done
 ROOT="$(cd "$(dirname "$SELF")" && pwd)"
 export PYTHONPATH="$ROOT/lib" SWIFTBAR_PLUGIN_PATH="${SWIFTBAR_PLUGIN_PATH:-$0}"
-PY="${CLAUDE_USAGE_PYTHON:-$(command -v python3 || echo /usr/bin/python3)}"
+# Prefer an interpreter with Pillow (crisp dropdown rows); any python3 works without it.
+if [ -n "${CLAUDE_USAGE_PYTHON:-}" ]; then PY="$CLAUDE_USAGE_PYTHON"; else
+  PY=""; for c in /usr/bin/python3 /usr/local/bin/python3 /opt/homebrew/bin/python3 "$(command -v python3)"; do
+    [ -x "$c" ] && "$c" -c 'import PIL' 2>/dev/null && { PY="$c"; break; }; done
+  [ -n "$PY" ] || PY="$(command -v python3 || echo /usr/bin/python3)"
+fi
 
 case "$1" in
   refresh)  # expire the quota cache + clear backoff so the next tick refetches

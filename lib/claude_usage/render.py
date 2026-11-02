@@ -82,3 +82,46 @@ def fmt(n):
 
 def money(x):
     return f"${x:,.2f}" if x >= 1 else f"${x:.3f}"
+
+
+def title_image(segments, color=None, h=16):
+    """Menubar title as one PNG: segments are ("bar", pct) or ("text", str).
+    Template (alpha-only) image when color is None so macOS tints it; colored RGBA when a warn/danger color is given.
+    Returns the SwiftBar param string. Falls back to pills-only + plain text without Pillow."""
+    if not HAVE_PIL:
+        px = bytearray()
+        w, bh, gap = 40, 10, 6
+        bars = [p for k, p in segments if k == "bar"]
+        tw = w * len(bars) + gap * (len(bars) - 1)
+        for y in range(h):
+            for x in range(tw):
+                i, lx = divmod(x, w + gap)
+                a = 0
+                if lx < w and i < len(bars) and (h - bh) // 2 <= y < (h - bh) // 2 + bh:
+                    a = round(255 * (.3 + .7 * (1 if lx < w * bars[i] else 0)))
+                px += bytes((0, 0, 0, a))
+        return " ".join(t for k, t in segments if k == "text") + f" | templateImage={png(tw, h, px)}"
+    import io
+    k = 2
+    f = ImageFont.truetype("/System/Library/Fonts/SFNS.ttf", 13 * k)
+    rgb = tuple(int(color.lstrip("#")[i:i + 2], 16) for i in (0, 2, 4)) if color else (0, 0, 0)
+    parts, x = [], 0
+    for kind, v in segments:
+        if kind == "bar":
+            parts.append((kind, v, x, 40 * k)); x += 40 * k + 6 * k
+        else:
+            tw = int(ImageDraw.Draw(Image.new("RGBA", (1, 1))).textlength(v, font=f))
+            parts.append((kind, v, x, tw)); x += tw + 6 * k
+    im = Image.new("RGBA", (max(x - 6 * k, 1), h * k), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    for kind, v, x0, w in parts:
+        if kind == "bar":
+            bh = 10 * k; y = (h * k - bh) // 2
+            d.rounded_rectangle((x0, y, x0 + w, y + bh), bh // 2, fill=(*rgb, 77))
+            if v > 0:
+                d.rounded_rectangle((x0, y, x0 + max(w * min(v, 1), bh), y + bh), bh // 2, fill=(*rgb, 255))
+        else:
+            d.text((x0, h * k // 2), v, font=f, fill=(*rgb, 255), anchor="lm")
+    b = io.BytesIO(); im.save(b, "PNG", dpi=(144, 144))
+    key = "image" if color else "templateImage"
+    return f"| {key}={base64.b64encode(b.getvalue()).decode()}"

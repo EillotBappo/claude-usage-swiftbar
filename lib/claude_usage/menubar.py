@@ -1,7 +1,7 @@
 import os, subprocess, sys
 from datetime import date, datetime, timedelta, timezone
 from . import db, pricing, quota as Q, queries, scan, settings as S
-from .render import ACTION, bar, chart, fmt, money, row
+from .render import ACTION, bar, chart, fmt, money, row, title_image
 
 RED, AMBER = "#FF3B30", "#FF9F0A"
 
@@ -49,18 +49,29 @@ def title(settings, q, st, now):
     five = ((q or {}).get("five_hour") or {}).get("utilization") or 0
     week = ((q or {}).get("seven_day") or {}).get("utilization") or 0
     worst = max(five, week)
-    color = f" color={RED}" if worst >= m["thresholds"]["danger"] else f" color={AMBER}" if worst >= m["thresholds"]["warn"] else ""
-    stale = q and q.get("age_s", 0) > 900
-    text = " · ".join(_field(f, q, st, now) for f in m["fields"])
-    if m["style"] == "compact":
-        text = " ".join(_field(f, q, st, now) for f in m["fields"][:2])
-    if stale:
-        text = "~" + text
+    color = RED if worst >= m["thresholds"]["danger"] else AMBER if worst >= m["thresholds"]["warn"] else None
+    stale = bool(q and q.get("age_s", 0) > 900)
+    fields = m["fields"][:2] if m["style"] == "compact" else m["fields"]
+    texts = [_field(f, q, st, now) for f in fields]
+    if stale and texts:
+        texts[0] = "~" + texts[0]
     if m["style"] in ("pill", "compact"):
-        return f"{text} | templateImage={bar(five / 100)}{color}"
+        # One pill per quota field (5h and week), drawn right before that field's text.
+        segs, buf = [], []
+        for f, t in zip(fields, texts):
+            if f in ("five_pct", "week_pct"):
+                if buf: segs.append(("text", " · ".join(buf))); buf = []
+                segs.append(("bar", (five if f == "five_pct" else week) / 100))
+            buf.append(t)
+        if buf: segs.append(("text", " · ".join(buf)))
+        if not any(k == "bar" for k, _ in segs):
+            segs.insert(0, ("bar", five / 100))
+        return title_image(segs, color)
+    text = " · ".join(texts)
+    c = f" color={color}" if color else ""
     if m["style"] == "icon":
-        return f"✳︎ {text} |{color}"
-    return f"{text} |{color}"
+        return f"✳︎ {text} |{c}"
+    return f"{text} |{c}"
 
 
 def render(settings, q, st, now=None, plugin_path=None) -> str:
