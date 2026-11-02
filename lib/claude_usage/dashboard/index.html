@@ -1,1 +1,110 @@
-<!doctype html><title>placeholder</title>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Claude Usage</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div class="brand"><span class="logo">✳︎</span> Claude Usage <span id="version" class="muted"></span></div>
+  <nav id="tabs">
+    <button data-tab="overview">Overview</button>
+    <button data-tab="tokens">Tokens</button>
+    <button data-tab="quota">Quota</button>
+    <button data-tab="projects">Projects</button>
+    <button data-tab="sessions">Sessions</button>
+    <button data-tab="savings" id="tab-savings" hidden>Savings</button>
+    <button data-tab="settings">Settings</button>
+  </nav>
+  <button id="refresh" class="ghost" title="Re-scan transcripts and re-fetch quota">↻ Refresh</button>
+</header>
+
+<section id="filters">
+  <div class="presets">
+    <button data-range="today">Today</button><button data-range="7d">7d</button><button data-range="30d">30d</button>
+    <button data-range="90d">90d</button><button data-range="month">This month</button><button data-range="all">All</button>
+  </div>
+  <label>From <input type="date" id="from"></label>
+  <label>To <input type="date" id="to"></label>
+  <details class="multi"><summary>Projects <span id="project-count"></span></summary><div id="project-opts"></div></details>
+  <details class="multi"><summary>Models <span id="model-count"></span></summary><div id="model-opts"></div></details>
+  <details class="multi"><summary>Sessions <span id="session-count"></span></summary><div id="session-opts"></div></details>
+  <button id="clear" class="ghost">Clear</button>
+</section>
+
+<main>
+  <div id="overview" class="tab">
+    <div class="kpis" id="kpis"></div>
+    <div class="card"><h3>Tokens per day <span class="legend" id="legend-tokens"></span></h3><div id="chart-daily" class="chart"></div></div>
+    <div class="grid2">
+      <div class="card"><h3>Quota utilization</h3><div id="chart-quota-mini" class="chart"></div></div>
+      <div class="card"><h3>By model</h3><div id="chart-models" class="chart donut"></div></div>
+    </div>
+  </div>
+
+  <div id="tokens" class="tab" hidden>
+    <div class="card"><h3>Tokens <span class="seg"><button data-bucket="day" class="on">Day</button><button data-bucket="hour">Hour</button></span>
+      <span class="seg"><button data-metric="new_tokens" class="on">New tokens</button><button data-metric="total">Incl. cache reads</button><button data-metric="cost">Cost</button></span></h3>
+      <div id="chart-tokens" class="chart tall"></div></div>
+    <div class="grid2">
+      <div class="card"><h3>Activity heatmap <span class="muted">weekday × hour</span></h3><div id="chart-heat" class="chart"></div></div>
+      <div class="card"><h3>Model breakdown</h3><div id="table-models"></div></div>
+    </div>
+  </div>
+
+  <div id="quota" class="tab" hidden>
+    <div class="kpis" id="quota-kpis"></div>
+    <div class="card"><h3>5-hour window</h3><div id="chart-five" class="chart tall"></div></div>
+    <div class="card"><h3>7-day window</h3><div id="chart-week" class="chart tall"></div></div>
+    <p class="muted">One point per quota poll (every <span id="poll-int"></span>s while the menubar is visible). Dashed line = danger threshold.</p>
+  </div>
+
+  <div id="projects" class="tab" hidden><div class="card"><div id="table-projects"></div></div></div>
+  <div id="sessions" class="tab" hidden><div class="card"><div id="table-sessions"></div></div></div>
+
+  <div id="savings" class="tab" hidden><div id="savings-body" class="grid2"></div></div>
+
+  <div id="settings" class="tab" hidden>
+    <form id="settings-form" class="grid2">
+      <div class="card">
+        <h3>Menubar</h3>
+        <label>Fields <span class="muted">(drag to reorder, tick to show)</span></label>
+        <ul id="fields-list" class="sortable"></ul>
+        <label>Style <select name="menubar.style"></select></label>
+        <label>Warn at <input type="number" name="menubar.thresholds.warn" min="0" max="100"> %</label>
+        <label>Danger at <input type="number" name="menubar.thresholds.danger" min="0" max="100"> %</label>
+        <label>Hide when both windows below <input type="number" name="menubar.hide_below_pct" min="0" max="100"> %</label>
+        <label>Show <select name="menubar.show_when.mode"><option value="always">always</option><option value="apps">only while these apps run</option></select></label>
+        <label>Apps <input name="menubar.show_when.apps" placeholder="zed, Claude, Code"></label>
+        <label><input type="checkbox" name="menubar.dropdown.charts"> Charts in dropdown</label>
+        <label>Dropdown history <input type="number" name="menubar.dropdown.days" min="1" max="365"> days</label>
+      </div>
+      <div class="card">
+        <h3>Data</h3>
+        <label>Quota poll interval <input type="number" name="data.poll_interval" min="60" max="3600"> s</label>
+        <label>Index transcripts from the last <input type="number" name="data.scan_days" min="1" max="3650"> days</label>
+        <label>Transcript roots <textarea name="data.roots" rows="2"></textarea></label>
+        <label>Include globs <textarea name="data.include" rows="1"></textarea></label>
+        <label>Exclude globs <textarea name="data.exclude" rows="1"></textarea></label>
+        <label>Project labels <span class="muted">cwd or folder = label, one per line</span><textarea name="data.project_labels" rows="3"></textarea></label>
+        <h3>Dashboard</h3>
+        <label>Port <input type="number" name="dashboard.port" min="1024" max="65535"></label>
+        <label>Stop server after idle <input type="number" name="dashboard.idle_exit_min" min="1" max="1440"> min</label>
+        <label>Default range <select name="dashboard.default_range"><option>today</option><option>7d</option><option>30d</option><option>90d</option><option>month</option><option>all</option></select></label>
+      </div>
+      <div class="card span2">
+        <h3>Pricing <span class="muted">USD per million tokens · prefix-matched on model id · <code>default</code> is the fallback</span></h3>
+        <table id="pricing-table"><thead><tr><th>Model</th><th>Input</th><th>Output</th><th>Cache write</th><th>Cache read</th><th></th></tr></thead><tbody></tbody></table>
+        <button type="button" id="add-price" class="ghost">+ Add model</button>
+      </div>
+      <div class="span2 actions"><button type="submit">Save settings</button> <span id="save-msg" class="muted"></span>
+        <span class="muted right" id="paths"></span></div>
+    </form>
+  </div>
+</main>
+<div id="toast" hidden></div>
+<script src="app.js"></script>
+</body>
+</html>
