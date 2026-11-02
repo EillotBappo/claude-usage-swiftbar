@@ -30,9 +30,10 @@ def _age(p):
     return time.time() - p.stat().st_mtime if p.exists() else 1e9
 
 
-def fetch(conn, settings, now=None, http=http_get, keychain=read_token, force=False):
+def fetch(conn, settings, now=None, http=None, keychain=None, force=False):
     """Fetch quota if due. Returns parsed dict or None. Caches to quota.json and appends to quota table."""
     now = now or time.time()
+    http, keychain = http or http_get, keychain or read_token
     cache, backoff = cache_dir() / "quota.json", cache_dir() / "quota.backoff"
     if not force and (_age(cache) < settings["data"]["poll_interval"] or _age(backoff) < BACKOFF_S):
         return current()
