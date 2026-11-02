@@ -30,7 +30,7 @@ CFG="${CLAUDE_USAGE_HOME:-$HOME/.config/claude-usage}"; mkdir -p "$CFG"
 [ -f "$CFG/settings.json" ] || { echo '{}' > "$CFG/settings.json"; echo "→ created $CFG/settings.json (defaults)"; }
 
 echo "→ indexing transcripts (first run can take a few seconds)…"
-PYTHONPATH="$DEST/lib" python3 -c 'from claude_usage import db, scan, settings; c=db.connect(); r=scan.run(c, settings.load()); print(f"   {r[\"added\"]} messages from {r[\"files\"]} files")'
+PYTHONPATH="$DEST/lib" python3 -c 'from claude_usage import db, scan, settings; c=db.connect(); r=scan.run(c, settings.load()); print("   %d messages from %d files" % (r["added"], r["files"]))'
 
 open -g "swiftbar://refreshallplugins" 2>/dev/null || true
 echo "✓ installed. Dashboard: $DEST/claude-usage.1m.sh open   ·   Settings: $CFG/settings.json"
