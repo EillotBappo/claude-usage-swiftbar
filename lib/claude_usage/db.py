@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY, value TEXT);
 
 def connect(path=None) -> sqlite3.Connection:
     path = path or (cache_dir() / "usage.db")
-    conn = sqlite3.connect(str(path), timeout=5)
+    conn = sqlite3.connect(str(path), timeout=5, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.executescript(SCHEMA)
